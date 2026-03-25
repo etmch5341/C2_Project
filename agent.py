@@ -21,11 +21,11 @@ def create_connection(host, port):
     return sock
 
 
-def compute_hmac(secret, message):
-    return hmac.new(secret, message, hashlib.sha256).digest()
-
 # def compute_hmac(secret, message):
-#     return hmac.new(secret.encode('utf-8'), message, hashlib.sha256).digest()
+#     return hmac.new(secret, message, hashlib.sha256).digest()
+
+def compute_hmac(secret, message):
+    return hmac.new(secret.encode('utf-8'), message, hashlib.sha256).digest()
 
 
 def authenticate(sock, secret):
