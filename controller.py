@@ -17,6 +17,7 @@ def generate_challenge():
 
 
 def authenticate(conn, secret):
+    print("[*] Authenticating client...")
     try:
         challenge = generate_challenge()
         conn.sendall(challenge)
