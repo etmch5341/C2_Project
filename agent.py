@@ -4,6 +4,7 @@ import time
 import hmac
 import hashlib
 import commands  # Python 2 replacement for subprocess.getoutput
+import sys
 
 CONFIG_FILE = "config.json"
 
@@ -23,10 +24,15 @@ def create_connection(host, port):
 def compute_hmac(secret, message):
     return hmac.new(secret, message, hashlib.sha256).digest()
 
+# def compute_hmac(secret, message):
+#     return hmac.new(secret.encode('utf-8'), message, hashlib.sha256).digest()
+
 
 def authenticate(sock, secret):
     try:
         challenge = sock.recv(1024)
+        print("Challenge received:", challenge)
+        sys.stdout.flush()
         if not challenge:
             return False
 
