@@ -26,6 +26,10 @@ def authenticate(conn, secret):
             return False
 
         expected = compute_hmac(secret, challenge)
+        
+        print("Challenge sent:", challenge)
+        print("Expected HMAC:", expected)
+        print("Received HMAC:", response)
 
         if hmac.compare_digest(response, expected):
             conn.sendall(b"OK")
