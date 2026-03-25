@@ -18,7 +18,7 @@ def generate_challenge():
 
 
 def authenticate(conn, secret):
-    print("[*] Authenticating client...")
+    # print("[*] Authenticating client...")
     try:
         challenge = generate_challenge()
         conn.sendall(challenge)
@@ -42,7 +42,7 @@ def authenticate(conn, secret):
             conn.sendall(b"FAIL")
             return False
     except:
-        print("in exception")
+        # print("in exception")
         return False
 
 
@@ -56,7 +56,7 @@ def main():
 
     while True:
         conn, addr = server.accept()
-        print(f"[+] Connection from {addr}")
+        # print(f"[+] Connection from {addr}")
 
         if not authenticate(conn, SECRET):
             print("[-] Authentication failed")
@@ -66,7 +66,7 @@ def main():
         command = input("> ").strip()
 
         if not command:
-            print("[!] Empty command, try again")
+            # print("[!] Empty command, try again")
             conn.close()
             continue
         
