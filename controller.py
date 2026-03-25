@@ -24,11 +24,10 @@ def authenticate(conn, secret):
         print("Challenge sent:", challenge)
 
         response = conn.recv(1024)
+        print("Received HMAC:", response)
         if not response:
             return False
         
-        print("Received HMAC:", response)
-
         expected = compute_hmac(secret, challenge)
         
         print("Challenge sent:", challenge)
