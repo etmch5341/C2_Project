@@ -47,6 +47,7 @@ def authenticate(conn, secret):
 
 def main():
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((HOST, PORT))
     server.listen(5)
 
@@ -61,7 +62,15 @@ def main():
             conn.close()
             continue
 
-        command = input("Enter command: ")
+        command = input("> ").strip()
+
+        if not command:
+            print("[!] Empty command, try again")
+            conn.close()
+            continue
+        
+        if command.lower() == "exit":
+            print("[*] Closing connection")
 
         conn.sendall(command.encode())
 
