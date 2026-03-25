@@ -26,6 +26,8 @@ def authenticate(conn, secret):
         response = conn.recv(1024)
         if not response:
             return False
+        
+        print("Received HMAC:", response)
 
         expected = compute_hmac(secret, challenge)
         
