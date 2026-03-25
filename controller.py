@@ -39,6 +39,7 @@ def authenticate(conn, secret):
             conn.sendall(b"FAIL")
             return False
     except:
+        print("in exception")
         return False
 
 
