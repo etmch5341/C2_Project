@@ -2,6 +2,7 @@ import socket
 import hmac
 import hashlib
 import os
+import sys
 
 HOST = "0.0.0.0"
 PORT = 4444
@@ -71,6 +72,7 @@ def main():
         
         if command.lower() == "exit":
             print("[*] Closing connection")
+            sys.exit(0)
 
         conn.sendall(command.encode())
 
