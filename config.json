@@ -1,0 +1,6 @@
+{
+  "host": "YOUR_HOST_IP",
+  "port": 4444,
+  "secret": "my_shared_key",
+  "sleep": 5
+}

