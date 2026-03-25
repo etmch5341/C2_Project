@@ -21,6 +21,7 @@ def authenticate(conn, secret):
     try:
         challenge = generate_challenge()
         conn.sendall(challenge)
+        print("Challenge sent:", challenge)
 
         response = conn.recv(1024)
         if not response:
