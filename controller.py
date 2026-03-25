@@ -21,18 +21,18 @@ def authenticate(conn, secret):
     try:
         challenge = generate_challenge()
         conn.sendall(challenge)
-        print("Challenge sent:", challenge)
+        # print("Challenge sent:", challenge)
 
         response = conn.recv(1024)
-        print("Received HMAC:", response)
+        # print("Received HMAC:", response)
         if not response:
             return False
         
         expected = compute_hmac(secret, challenge)
         
-        print("Challenge sent:", challenge)
-        print("Expected HMAC:", expected)
-        print("Received HMAC:", response)
+        # print("Challenge sent:", challenge)
+        # print("Expected HMAC:", expected)
+        # print("Received HMAC:", response)
 
         if hmac.compare_digest(response, expected):
             conn.sendall(b"OK")

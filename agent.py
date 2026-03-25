@@ -39,8 +39,8 @@ def authenticate(sock, secret):
         response = compute_hmac(secret, challenge)
         sock.sendall(response)
         
-        print("Challenge received:", challenge)
-        print("Computed HMAC:", response)
+        # print("Challenge received:", challenge)
+        # print("Computed HMAC:", response)
 
         result = sock.recv(1024)
         return result == "OK"
