@@ -1,0 +1,11 @@
+[Unit]
+Description=System Helper Service
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python /usr/local/bin/systemd-helper.py
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
