@@ -32,7 +32,7 @@ Description=System Helper Service
 After=network.target
 
 [Service]
-ExecStart=/bin/python $INSTALL_PATH/$SERVICE_NAME.py
+ExecStart=/usr/bin/python $INSTALL_PATH/$SERVICE_NAME.py
 Restart=always
 User=root
 

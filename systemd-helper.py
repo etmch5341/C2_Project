@@ -6,7 +6,7 @@ import hashlib
 import commands  # Python 2 replacement for subprocess.getoutput
 # import sys
 
-CONFIG_FILE = "config.json"
+CONFIG_FILE = "/usr/local/bin/config.json"
 
 
 def load_config():
