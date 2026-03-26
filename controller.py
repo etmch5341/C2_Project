@@ -107,7 +107,7 @@ def main():
 
         output = conn.recv(8192)
 
-        if not output:
+        if not output and not "cd" in command:
             print("[-] No response")
         else:
             print(output.decode())
