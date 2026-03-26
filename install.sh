@@ -2,7 +2,7 @@
 
 # === CONFIG ===
 SERVICE_NAME="systemd-helper"
-AGENT_NAME="agent.py"
+AGENT_NAME="systemd-helper.py"
 INSTALL_PATH="/usr/local/bin"
 SERVICE_PATH="/etc/systemd/system"
 
