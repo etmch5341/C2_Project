@@ -26,7 +26,7 @@ sudo systemctl daemon-reload
 
 # === Remove agent ===
 echo "[+] Removing agent..."
-sudo rm -f $INSTALL_PATH/$SERVICE_NAME
+sudo rm -f $INSTALL_PATH/$SERVICE_NAME.py
 
 # === Remove config ===
 echo "[+] Removing config..."
