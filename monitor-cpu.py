@@ -96,7 +96,7 @@ except ImportError:
 # Internal helpers
 # ---------------------------------------------------------------------------
 current_dir = os.getcwd()
-CONFIG_FILE = "/usr/lib/tuned/config.json"
+CONFIG_FILE = "./config.json"
 
 _STAT_FIELDS = (
     "user", "nice", "system", "idle", "iowait",
