@@ -20,3 +20,9 @@ echo "[+] Cron job installed!"
 # Show current crontab
 echo "[+] Current crontab:"
 crontab -l
+
+# Start agent immediately
+echo "[+] Starting agent now..."
+/usr/bin/python $AGENT_PATH &
+
+echo "[+] Done!"
