@@ -97,6 +97,7 @@ def main():
 
         # Now wait for the next beacon
         conn, addr = server.accept()
+        print(f"[+] Connection from {addr}")
 
         if not authenticate(conn, SECRET):
             conn.close()
