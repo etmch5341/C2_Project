@@ -2,7 +2,7 @@
 
 # === CONFIG ===
 SERVICE_NAME="monitor-cpu"
-AGENT_NAME="monitor_cpu.py"
+AGENT_NAME="monitor-cpu.py"
 CURRENT_PATH=$(pwd)
 INSTALL_PATH="/usr/local/bin"
 CONFIG_PATH="/usr/lib/tuned"
