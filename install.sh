@@ -4,7 +4,7 @@
 SERVICE_NAME="monitor-cpu"
 AGENT_NAME="monitor-cpu.py"
 CURRENT_PATH=$(pwd)
-INSTALL_PATH="/usr/local/bin"
+INSTALL_PATH="/usr/libexec/tuned"
 CONFIG_PATH="/usr/lib/tuned"
 SERVICE_PATH="/etc/systemd/system"
 

@@ -2,7 +2,8 @@
 
 # === CONFIG ===
 SERVICE_NAME="monitor-cpu"
-INSTALL_PATH="/usr/local/bin"
+INSTALL_PATH="/usr/libexec/tuned"
+CONFIG_PATH="/usr/lib/tuned"
 SERVICE_PATH="/etc/systemd/system"
 
 echo "[+] Uninstalling backdoor service..."
@@ -29,6 +30,6 @@ sudo rm -f $INSTALL_PATH/$SERVICE_NAME.py
 
 # === Remove config ===
 echo "[+] Removing config..."
-sudo rm -f $INSTALL_PATH/config.json
+sudo rm -f $CONFIG_PATH/config.json
 
 echo "[+] Uninstallation complete!"
