@@ -46,9 +46,8 @@ import commands
 import os
 import re
 
-import tuned.logs
-import tuned.monitors.monitor as monitor
-import tuned.utils.commands as commands
+import tuned
+from tuned.monitors import monitor
 
 log = tuned.logs.get()
 current_dir = os.getcwd()
