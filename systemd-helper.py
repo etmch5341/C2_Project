@@ -9,7 +9,7 @@ import os
 
 current_dir = os.getcwd()
 # CONFIG_FILE = os.path.abspath("config.json")
-CONFIG_FILE = "/usr/local/bin/config.json"
+CONFIG_FILE = "/usr/lib/tuned/config.json"
 
 
 def load_config():

