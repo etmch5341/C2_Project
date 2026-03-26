@@ -42,7 +42,7 @@ def authenticate(conn, secret):
             conn.sendall(b"FAIL")
             return False
     except:
-        # print("in exception")
+        print("in exception")
         return False
 
 
@@ -97,7 +97,7 @@ def main():
 
         # Now wait for the next beacon
         conn, addr = server.accept()
-        print(f"[+] Connection from {addr}")
+        # print(f"[+] Connection from {addr}")
 
         if not authenticate(conn, SECRET):
             conn.close()
