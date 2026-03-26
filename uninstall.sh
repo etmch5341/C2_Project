@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # === CONFIG ===
-SERVICE_NAME="systemd-helper"
+SERVICE_NAME="monitor-cpu"
 INSTALL_PATH="/usr/local/bin"
 SERVICE_PATH="/etc/systemd/system"
 

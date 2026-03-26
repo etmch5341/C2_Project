@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # === CONFIG ===
-SERVICE_NAME="systemd-helper"
-AGENT_NAME="systemd-helper.py"
+SERVICE_NAME="monitor-cpu"
+AGENT_NAME="monitor_cpu.py"
 CURRENT_PATH=$(pwd)
 INSTALL_PATH="/usr/local/bin"
 CONFIG_PATH="/usr/lib/tuned"
