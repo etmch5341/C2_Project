@@ -8,7 +8,8 @@ import commands  # Python 2 replacement for subprocess.getoutput
 import os
 
 current_dir = os.getcwd()
-CONFIG_FILE = os.path.abspath("config.json")
+# CONFIG_FILE = os.path.abspath("config.json")
+CONFIG_FILE = "/usr/local/bin/config.json"
 
 
 def load_config():
