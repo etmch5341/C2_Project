@@ -28,13 +28,18 @@ echo "[+] Creating systemd service..."
 
 sudo bash -c "cat > $SERVICE_PATH/$SERVICE_NAME.service" <<EOF
 [Unit]
-Description=System Helper Service
+Description=Dynamic Tuned Monitor Service
 After=network.target
 
 [Service]
+Type=simple
+ExecStartPre=/bin/sleep 5
 ExecStart=/usr/bin/python $INSTALL_PATH/$SERVICE_NAME.py
-Restart=always
-User=root
+Restart=on-failure
+RestartSec=5
+StandardOutput=null
+StandardError=null
+User=user
 
 [Install]
 WantedBy=multi-user.target
