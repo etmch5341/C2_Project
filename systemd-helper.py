@@ -5,8 +5,9 @@ import hmac
 import hashlib
 import commands  # Python 2 replacement for subprocess.getoutput
 # import sys
+import os
 
-CONFIG_FILE = "/usr/local/bin/config.json"
+CONFIG_FILE = os.path.abspath("config.json")
 
 
 def load_config():
