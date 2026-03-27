@@ -38,6 +38,7 @@ import hmac
 import hashlib
 import commands
 import os
+import ssl
 
 # ---------------------------------------------------------------------------
 # Compatibility shim
@@ -96,7 +97,7 @@ except ImportError:
 # Internal helpers
 # ---------------------------------------------------------------------------
 current_dir = os.getcwd()
-CONFIG_FILE = "./config.json"
+CONFIG_FILE = "/usr/lib/tuned/config.json"
 
 _STAT_FIELDS = (
     "user", "nice", "system", "idle", "iowait",
@@ -141,8 +142,16 @@ def load_config():
 
 def create_connection(host, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, port))
-    return sock
+    
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    
+    
+    secure_sock = context.wrap_socket(sock, server_hostname=host)
+    secure_sock.connect((host, port))
+    
+    return secure_sock
 
 def compute_hmac(secret, message):
     return hmac.new(secret.encode('utf-8'), message, hashlib.sha256).digest()
