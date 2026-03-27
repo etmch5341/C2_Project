@@ -72,7 +72,7 @@ def main():
             sys.exit(0)
 
         # Now wait for the next beacon
-        conn, addr = server.accept()
+        conn, addr = secure_server.accept()
         # print(f"[+] Connection from {addr}")
 
         if not authenticate(conn, SECRET):
