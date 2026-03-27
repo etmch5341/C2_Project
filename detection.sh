@@ -51,5 +51,18 @@ else
     echo -e "${GREEN}[+] No unusual Python network activity detected.${NC}"
 fi
 
+# 4. Keyword-Based Detection (The "Smoking Gun" Hunter)
+# Searches for obvious red-flag words in the process list and service names.
+echo -e "\n${YELLOW}[4] Scanning for high-risk keywords (backdoor, shell, c2)...${NC}"
+KEYWORDS="backdoor|shell|c2|payload|exploit|nc -e|reverse"
+SMOKING_GUN=$(ps -ef | grep -Ei "$KEYWORDS" | grep -v "grep" | grep -v "detector.sh")
+
+if [ -n "$SMOKING_GUN" ]; then
+    echo -e "${RED}[!] ALERT: Found processes containing high-risk keywords!${NC}"
+    echo "$SMOKING_GUN"
+else
+    echo -e "${GREEN}[+] No obvious 'smoking gun' keywords found in active processes.${NC}"
+fi
+
 echo "--------------------------------------------------"
 echo -e "${YELLOW}[*] Scan Complete.${NC}"
