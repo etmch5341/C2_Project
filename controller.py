@@ -1,3 +1,4 @@
+import json
 import socket
 import hmac
 import hashlib
@@ -5,10 +6,14 @@ import os
 import sys
 import ssl
 
-HOST = "0.0.0.0"
-PORT = 4444
-SECRET = "my_shared_key"
+CONFIG_FILE = "./config.json"
 
+def load_config():
+    with open(CONFIG_FILE, "r") as f:
+        config = json.load(f)
+    return config["host"], config["port"], config["secret"]
+
+HOST, PORT, SECRET = load_config()
 
 def compute_hmac(secret, message):
     return hmac.new(secret.encode(), message, hashlib.sha256).digest()
