@@ -18,6 +18,8 @@ sudo mv $CURRENT_PATH/$AGENT_NAME $INSTALL_PATH/$SERVICE_NAME
 if [ -f $CURRENT_PATH/config.json ]; then
     echo "[+] Moving config.json..."
     sudo mv $CURRENT_PATH/config.json $CONFIG_PATH/config.json
+    sudo chown root:root $CONFIG_PATH/config.json
+    sudo chmod 600 $CONFIG_PATH/config.json
 fi
 
 # === Set permissions ===
