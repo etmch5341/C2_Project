@@ -1,45 +1,54 @@
 #!/bin/bash
 
-# --- Color formatting for readability ---
+# --- Color formatting ---
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-echo -e "${YELLOW}[*] Starting C2 Backdoor Detection Scan...${NC}"
+echo -e "${YELLOW}[*] Starting Behavioral Anomaly Scan...${NC}"
 echo "--------------------------------------------------"
 
-# 1. Check for suspicious Systemd services
-echo -e "${YELLOW}[1] Checking for suspicious Systemd services...${NC}"
-# Look for services running from /usr/libexec/ (a common hiding spot)
-SUSPICIOUS_SVC=$(systemctl list-units --type=service --all | grep -E "monitor|tuned|backdoor")
-if [ -n "$SUSPICIOUS_SVC" ]; then
-    echo -e "${RED}[!] Found suspicious service(s):${NC}"
-    echo "$SUSPICIOUS_SVC"
+# 1. Hunt for "Orphaned" Python Processes
+# Legitimate system services (like firewalld or tuned) usually have a Parent Process ID (PPID) 
+# of 1 (systemd). If a Python script is running with a strange PPID or no controlling tty, 
+# it's a major red flag.
+echo -e "${YELLOW}[1] Hunting for orphaned/background Python processes...${NC}"
+ORPHANS=$(ps -ef | grep python | awk '$3 != 1 && $6 == "?"' | grep -v "grep")
+if [ -n "$ORPHANS" ]; then
+    echo -e "${RED}[!] Found Python processes running without a terminal or systemd parent:${NC}"
+    echo "$ORPHANS"
 else
-    echo -e "${GREEN}[+] No obvious suspicious services found.${NC}"
+    echo -e "${GREEN}[+] No suspicious orphaned Python processes found.${NC}"
 fi
 
-# 2. Check for Process Name Spoofing
-echo -e "\n${YELLOW}[2] Checking for Python scripts masquerading as Kernel Threads...${NC}"
-# This looks for processes named 'kworker' that are actually running via the Python interpreter
-SPOOFED_PROC=$(ps -ef | grep -i "python" | grep -E "kworker|syslogd|dbus")
-if [ -n "$SPOOFED_PROC" ]; then
-    echo -e "${RED}[!] ALERT: Found Python process masquerading as a system thread!${NC}"
-    echo "$SPOOFED_PROC"
-else
-    echo -e "${GREEN}[+] No spoofed Python processes detected.${NC}"
-fi
+# 2. Identify Disguised Processes (The "ctypes" hunter)
+# This compares the 'comm' (internal name) with the actual command line 'args'.
+# If 'comm' is 'kworker' but 'args' contains 'python', someone is lying.
+echo -e "\n${YELLOW}[2] Detecting process name mismatches (Spoofing)...${NC}"
+ps -e -o pid,comm,args | grep -v "grep" | while read -r line; do
+    PID=$(echo $line | awk '{print $1}')
+    COMM=$(echo $line | awk '{print $2}')
+    ARGS=$(echo $line | awk '{$1=$2=""; print $0}')
+    
+    # If the name looks like a kernel thread but the binary is python
+    if [[ "$COMM" == *"kworker"* ]] && [[ "$ARGS" == *"python"* ]]; then
+        echo -e "${RED}[!] ALERT: Process $PID is claiming to be '$COMM' but is actually running Python!${NC}"
+        echo "    Full Command: $ARGS"
+    fi
+done
 
-# 3. Check for Network Beaconing (Persistent Connections)
-echo -e "\n${YELLOW}[3] Checking for active connections to suspicious ports...${NC}"
-# Look for anything connected to your C2 port (4444)
-BEACON=$(netstat -antp 2>/dev/null | grep ":4444")
-if [ -n "$BEACON" ]; then
-    echo -e "${RED}[!] ALERT: Active connection to C2 port 4444 detected!${NC}"
-    echo "$BEACON"
+# 3. Hidden Network Sockets
+# Instead of looking for port 4444, we look for ANY established connection 
+# from a process that doesn't usually talk to the internet.
+echo -e "\n${YELLOW}[3] Scanning for unusual outbound network sockets...${NC}"
+# Looking for ESTABLISHED connections from Python
+NET_ANOMALY=$(ss -tpue | grep "python")
+if [ -n "$NET_ANOMALY" ]; then
+    echo -e "${RED}[!] Found active network connections from Python:${NC}"
+    echo "$NET_ANOMALY"
 else
-    echo -e "${GREEN}[+] No active C2 network beacons found.${NC}"
+    echo -e "${GREEN}[+] No unusual Python network activity detected.${NC}"
 fi
 
 echo "--------------------------------------------------"
