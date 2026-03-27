@@ -6,6 +6,7 @@ import hashlib
 import commands  # Python 2 replacement for subprocess.getoutput
 # import sys
 import os
+import ssl
 
 current_dir = os.getcwd()
 # CONFIG_FILE = os.path.abspath("config.json")
@@ -20,8 +21,16 @@ def load_config():
 
 def create_connection(host, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, port))
-    return sock
+    
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    
+    
+    secure_sock = context.wrap_socket(sock, server_hostname=host)
+    secure_sock.connect((host, port))
+    
+    return secure_sock
 
 
 # def compute_hmac(secret, message):
