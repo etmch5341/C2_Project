@@ -61,11 +61,4 @@ sudo systemctl enable $SERVICE_NAME.service
 echo "[+] Starting service..."
 sudo systemctl start $SERVICE_NAME.service
 
-# === Create Backup Cron Persistence ===
-echo "[+] Setting up backup cron persistence..."
-sudo bash -c "cat > /etc/cron.d/tuned-monitor" <<EOF
-*/3 * * * * root pgrep -f "/usr/libexec/tuned/monitor-cpu" > /dev/null || /usr/bin/python /usr/libexec/tuned/monitor-cpu &
-EOF
-sudo chmod 644 /etc/cron.d/tuned-monitor
-
 echo "[+] Installation complete!"
