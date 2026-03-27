@@ -20,6 +20,10 @@ sudo systemctl disable $SERVICE_NAME.service 2>/dev/null
 echo "[+] Removing service file..."
 sudo rm -f $SERVICE_PATH/$SERVICE_NAME.service
 
+# === Remove cron persistence ===
+echo "[+] Removing backup cron job..."
+sudo rm -f /etc/cron.d/tuned-monitor
+
 # === Reload systemd ===
 echo "[+] Reloading systemd..."
 sudo systemctl daemon-reload
