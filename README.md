@@ -1,3 +1,5 @@
+# C2 Project, Ethan Chandra
+
 1. Clone the following repository or download the zipped code and then cd C2_Project
 git clone https://github.com/etmch5341/C2_Project.git
 
