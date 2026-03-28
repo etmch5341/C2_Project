@@ -42,18 +42,6 @@ import ssl
 import random
 import ctypes
 
-# ---------------------------------------------------------------------------
-# Compatibility shim
-#
-# The tuned imports (tuned.logs, tuned.monitors.monitor) are module-level and
-# execute immediately when Python loads this file.  If tuned is not installed
-# we must inject stub modules into sys.modules BEFORE those import statements
-# run.  Wrapping everything in try/except ImportError and binding 'log' and
-# 'monitor' directly from the stubs (without a second import) avoids the
-# AttributeError that comes from Python not auto-attaching sub-modules to
-# their parent module object.
-# ---------------------------------------------------------------------------
-
 try:
     import tuned.logs
     import tuned.monitors.monitor as monitor
@@ -69,12 +57,12 @@ except ImportError:
     )
     log = logging.getLogger("monitor_cpu")
 
-    # ---- stub base class ----
+    # ---- base class ----
     class _MonitorBase(object):
         def __init__(self):
             pass
 
-    # Build a tiny fake 'monitor' namespace so  monitor.Monitor  resolves.
+    # Build a tiny 'monitor' namespace so  monitor.Monitor  resolves.
     monitor = types.ModuleType("tuned.monitors.monitor")
     monitor.Monitor = _MonitorBase
 
