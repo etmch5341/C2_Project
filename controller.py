@@ -97,7 +97,7 @@ def main():
             conn.close()
         except (ConnectionResetError, BrokenPipeError, ssl.SSLError):
             print("[-] Agent disconnected. Going back to listening...")
-            continue # This loops back to s.accept() instead of crashing!
+            continue # loops back to s.accept() instead of crashing
         except KeyboardInterrupt:
             print("\n[!] Shutting down controller.")
             break
